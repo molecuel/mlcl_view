@@ -78,15 +78,32 @@ view.prototype.registerTheme = function registerTheme(theme, callback) {
   }
   this.themes[name] = theme;
 
-  // load all files
+  // load all template files
   self.registerDirectory(theme.dir, function(err, paths) {
 
+    // initialize handlebars instance
+    var hbs = handlebars.create();
+
+    // load the partials
     if(paths.partials) {
       _.each(paths.partials, function(filePath, name) {
         paths.partials[name] = fs.readFileSync(filePath, 'utf8');
       });
     }
     theme.files = paths;
+
+    // register partials
+    _.each(theme.files.partials, function(partial, name) {
+      hbs.registerPartial(name, partial);
+    });
+
+    // register helpers
+    _.each(self.helpers.global, function(helper, name) {
+      hbs.registerHelper(name, helper);
+    });
+
+    theme.hbs = hbs;
+
     return callback();
   });
 };
@@ -143,23 +160,6 @@ view.prototype.get = function get(req, res, next) {
   // create theme instance clone
   var theme = self.getTheme(content);
 
-  // initialize separate handlebars instance for each request
-  var hbs = handlebars.create();
-
-  // register partials
-  _.each(theme.files.partials, function(partial, name) {
-    hbs.registerPartial(name, partial);
-  });
-
-  // register helpers
-  _.each(self.helpers.global, function(helper, name) {
-    hbs.registerHelper(name, helper);
-  });
-  _.each(self.helpers.request, function(helper, name) {
-    hbs.registerHelper(name, helper.apply(self, [self, req, res]));
-  });
-
-  theme.hbs = hbs;
   res.locals._view.theme = theme;
 
   var html = '';
@@ -171,6 +171,15 @@ view.prototype.get = function get(req, res, next) {
     }
 
     async.series([
+      function initRequestHelper(cb) {
+        self.initRequestHelper(req, res, function(err, helpers) {
+          if(err) {
+            return cb(err);
+          }
+          res.locals._view.helpers = helpers;
+          cb();
+        });
+      },
       function renderContents(cb) {
         self.renderRegions(req, res, function(err, result) {
           regions = result;
@@ -198,6 +207,20 @@ view.prototype.get = function get(req, res, next) {
   });
 };
 
+view.prototype.initRequestHelper = function(req, res, callback) {
+  var self = this;
+  var helpers = {};
+  async.each(Object.keys(self.helpers.request), function(name, cb) {
+    helpers[name] = self.helpers.request[name].apply(self, [self, req, res]);
+    cb();
+  }, function(err) {
+    if(err) {
+      return callback(err);
+    }
+    return callback(null, helpers);
+  });
+};
+
 /**
  *
  * @param locals
@@ -213,7 +236,7 @@ view.prototype.getTheme = function(locals, options) {
   if(!self.themes[name]) {
     name = Object.keys(self.themes).shift();
   }
-  if(self.themes[name]) return _.clone(self.themes[name]);
+  if(self.themes[name]) return self.themes[name];
   return;
 };
 
@@ -384,11 +407,12 @@ view.prototype.getTemplate = function(req, res, item, suggestions) {
  * @param cb
  * @returns {*}
  */
-view.prototype.renderFile = function(req, res, data, filename, cb) {
+view.prototype.renderFile = function(req, res, data, filename, callback) {
   var self = this;
   var locals = res.locals;
   var theme = locals._view.theme;
   var compiled = self.compileFile(req, res, filename);
+
   if(compiled) {
     template = compiled.template;
     try {
@@ -396,8 +420,7 @@ view.prototype.renderFile = function(req, res, data, filename, cb) {
       var vars = _.clone(data);
       vars.locals = locals;
       vars.locals.req = _.clone(req);
-      console.log("TEMPLATE RENDER: " + filename);
-      html = template( vars, {helpers: res.locals._view.theme.helpers, data: {req:req.locals, res:res.locals}});
+      html = template( vars, {helpers: res.locals._view.helpers, data: {req:req.locals, res:res.locals}});
     } catch (err) {
       console.log(err);
       if (err.message) {
@@ -405,18 +428,18 @@ view.prototype.renderFile = function(req, res, data, filename, cb) {
       } else if (typeof err === 'string') {
         err = '[' + template.__filename + '] ' + err;
       }
-      return cb(err, null);
+      return callback(err, null);
     }
 
     if(compiled.layout) {
-      self.renderFile(req, res, {body: html, locals: locals}, compiled.layout, cb);
+      self.renderFile(req, res, {body: html, locals: locals}, compiled.layout, callback);
     } else {
-      cb(null, html);
+      callback(null, html);
     }
   } else {
-    cb('[' + filename + '] not resolvable');
+    callback('[' + filename + '] not resolvable');
   }
-}
+};
 
 view.prototype.compileFile = function(req, res, filename) {
   var self = this, template;

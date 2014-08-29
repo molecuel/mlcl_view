@@ -1,6 +1,6 @@
 {
   "name": "mlcl_view",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "dependencies": {
     "walk": ">=2.2.1",
     "async": ">=0.0.1",
