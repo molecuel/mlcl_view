@@ -161,7 +161,7 @@ view.prototype.get = function get(req, res, next) {
   var theme = self.getTheme(content);
 
   res.locals._view.theme = theme;
-
+  res.locals._html = { blocks: {}, container: {}};
   var html = '';
   var regions;
 
@@ -180,6 +180,11 @@ view.prototype.get = function get(req, res, next) {
           cb();
         });
       },
+      function renderBlocks(cb) {
+        self.renderBlocks(req, res, function(err, result) {
+          cb();
+        });
+      },
       function renderContents(cb) {
         self.renderRegions(req, res, function(err, result) {
           regions = result;
@@ -187,8 +192,9 @@ view.prototype.get = function get(req, res, next) {
         });
       },
       function renderLayout(cb) {
-        var layout = res.locals._view.layout;
+        var layout = res.locals._view.layout || 'default';
         var layout = self.getLayout(theme, layout);
+
         var data = regions;
         self.renderFile(req, res, data, layout, function(err, result) {
           if(err) {
@@ -267,6 +273,42 @@ view.prototype.getLayout = function(theme, suggestions) {
 /* ************************************************************************
  RENDERING
  ************************************************************************ */
+view.prototype.renderBlocks = function(req, res, callback) {
+  var self = this;
+  var blocks = res.locals.blocks || {};
+  var container = res.locals._html.container;
+  var result = {};
+
+  // block target
+  var targets = [];
+
+  async.each(blocks, function(block, cb) {
+    self.render(req, res, block, function(err, html) {
+      if(block.target && _.indexOf(targets, block.target) == -1) {
+        targets.push(block.target);
+      }
+      if(err) {
+        return cb(err);
+      }
+      block._html = html;
+      cb();
+    });
+  }, function(err) {
+    if(err) {
+      return callback(err);
+    }
+    _.each(targets, function(target) {
+      var target_blocks = _.sortBy(_.filter(blocks, function(block) { return block.target == target; }), function(block) { return Number(block.sequence); });
+      var html = '';
+      _.each(target_blocks, function(block) {
+        html += block._html;
+      });
+      container[target] = html;
+    });
+    return callback(null, result);
+  });
+};
+
 view.prototype.renderRegions = function(req, res, callback) {
   var self = this;
   var data = res.locals.data || {};
@@ -291,7 +333,6 @@ view.prototype.renderRegions = function(req, res, callback) {
 
 view.prototype.render = function(req, res, context, callback) {
   var self = this;
-
   if(_.isArray(context)) {
     var result = [];
     async.each(context, function(item, cb) {
@@ -370,16 +411,11 @@ view.prototype.getTemplate = function(req, res, item, suggestions) {
   if(!item._meta) {
     return;
   }
-  if(item._meta) {
-    module = item._meta.module;
-    type = item._meta.type;
-    if(type) suggestions.push(type);
-  }
-
   if(item._view) {
     if(item._view.template) {
+      console.log(item._view);
       if(_.isArray(item._view.template)) {
-        //suggestions = suggestions.concat(item._view.template);
+        suggestions = suggestions.concat(item._view.template);
       } else {
         suggestions.push(item._view.template);
       }
@@ -387,14 +423,14 @@ view.prototype.getTemplate = function(req, res, item, suggestions) {
   }
 
   var t;
-  _.each(suggestions.reverse(), function(path, index) {
-    if(module) {
-      path = Array(module, path).join('/');
-    }
+  _.each(suggestions, function(path, index) {
+    debug("validate template path: " + path);
     if(!t && theme.files && theme.files.templates && theme.files.templates[path]) {
+      debug("use template path: " + path);
       t = theme.files.templates[path];
     }
   });
+  debug("resolved: " + t);
   return t;
 };
 
@@ -412,7 +448,7 @@ view.prototype.renderFile = function(req, res, data, filename, callback) {
   var locals = res.locals;
   var theme = locals._view.theme;
   var compiled = self.compileFile(req, res, filename);
-
+  debug('Render file ' + filename);
   if(compiled) {
     template = compiled.template;
     try {
@@ -420,7 +456,7 @@ view.prototype.renderFile = function(req, res, data, filename, callback) {
       var vars = _.clone(data);
       vars.locals = locals;
       vars.locals.req = _.clone(req);
-      html = template( vars, {helpers: res.locals._view.helpers, data: {req:req.locals, res:res.locals}});
+      html = template( vars, {helpers: res.locals._view.helpers, data: {req:req.locals, res:res.locals, container:res.locals._html.container }});
     } catch (err) {
       console.log(err);
       if (err.message) {
