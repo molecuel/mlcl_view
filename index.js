@@ -169,6 +169,9 @@ view.prototype.get = function get(req, res, next) {
     if(err) {
       return res.send(500, err);
     }
+    if(req.query.json || req.query.debug) {
+      return res.send(res.locals);
+    }
 
     async.series([
       function initRequestHelper(cb) {
