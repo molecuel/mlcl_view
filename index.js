@@ -170,7 +170,7 @@ view.prototype.get = function get(req, res, next) {
       return res.send(500, err);
     }
     if(req.query.json || req.query.debug) {
-      return res.send(res.locals);
+      return res.send(res.locals.data);
     }
 
     async.series([
