@@ -286,14 +286,10 @@ view.prototype.renderBlocks = function(req, res, callback) {
   var targets = [];
 
   async.each(blocks, function(block, cb) {
-    self.render(req, res, block, function(err, html) {
+    self.renderBlock(req, res, block, function(err, html) {
       if(block.target && _.indexOf(targets, block.target) == -1) {
         targets.push(block.target);
       }
-      if(err) {
-        return cb(err);
-      }
-      block._html = html;
       cb();
     });
   }, function(err) {
@@ -309,6 +305,21 @@ view.prototype.renderBlocks = function(req, res, callback) {
       container[target] = html;
     });
     return callback(null, result);
+  });
+};
+
+view.prototype.renderBlock = function renderBlock(req, res, block, callback) {
+  var self = this;
+  var item = _.clone(block.data);
+  item._view = _.clone(block._view);
+  item._meta = _.clone(block._meta);
+
+  self.render(req, res, item, function(err, html) {
+    if(err) {
+      return cb(err);
+    }
+    block._html = html;
+    callback(null, html);
   });
 };
 
