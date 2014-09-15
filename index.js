@@ -196,6 +196,7 @@ view.prototype.get = function get(req, res, next) {
       },
       function renderLayout(cb) {
         var layout = res.locals._view.layout || 'default';
+        debug("page layout is: " + layout);
         var layout = self.getLayout(theme, layout);
 
         var data = regions;
@@ -316,7 +317,7 @@ view.prototype.renderBlock = function renderBlock(req, res, block, callback) {
 
   self.render(req, res, item, function(err, html) {
     if(err) {
-      return cb(err);
+      return callback(err);
     }
     block._html = html;
     callback(null, html);
