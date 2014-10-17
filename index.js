@@ -471,7 +471,14 @@ view.prototype.renderFile = function(req, res, data, filename, callback) {
       var vars = _.clone(data);
       vars.locals = locals;
       vars.locals.req = _.clone(req);
-      html = template( vars, {helpers: res.locals._view.helpers, data: {req:req.locals, res:res.locals, container:res.locals._html.container }});
+      var globals = {
+        lang: req.locale,
+        req:req.locals,
+        res:res.locals,
+        container:res.locals._html.container
+      }
+
+      html = template( vars, {helpers: res.locals._view.helpers, data: globals});
     } catch (err) {
       console.log(err);
       if (err.message) {
