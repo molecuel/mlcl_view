@@ -4,7 +4,7 @@
   "dependencies": {
     "walk": ">=2.2.1",
     "async": ">=0.0.1",
-    "debug": ">=0.0.1",
+    "debug": ">=3.0.0",
     "handlebars": ">=0.0.1",
     "underscore": ">=0.0.1",
     "underscore.nested": ">=0.0.1",
