@@ -2,7 +2,7 @@
   "name": "mlcl_view",
   "version": "0.0.10",
   "dependencies": {
-    "walk": ">=2.2.1",
+    "walk": ">=2.3.12",
     "async": ">=0.0.1",
     "debug": ">=0.0.1",
     "handlebars": ">=0.0.1",
