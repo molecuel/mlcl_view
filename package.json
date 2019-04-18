@@ -8,7 +8,7 @@
     "handlebars": ">=0.0.1",
     "underscore": ">=0.0.1",
     "underscore.nested": ">=0.0.1",
-    "moment-timezone": ">=0.0.1"
+    "moment-timezone": ">=0.5.24"
   },
   "devDependencies": {
     "mocha": "*",
