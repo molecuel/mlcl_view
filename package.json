@@ -3,7 +3,7 @@
   "version": "0.0.10",
   "dependencies": {
     "walk": ">=2.2.1",
-    "async": ">=0.0.1",
+    "async": ">=3.0.1",
     "debug": ">=0.0.1",
     "handlebars": ">=0.0.1",
     "underscore": ">=0.0.1",
