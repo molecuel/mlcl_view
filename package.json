@@ -5,7 +5,7 @@
     "walk": ">=2.2.1",
     "async": ">=0.0.1",
     "debug": ">=0.0.1",
-    "handlebars": ">=0.0.1",
+    "handlebars": ">=4.2.0",
     "underscore": ">=0.0.1",
     "underscore.nested": ">=0.0.1",
     "moment-timezone": ">=0.0.1"
