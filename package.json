@@ -6,7 +6,7 @@
     "async": ">=0.0.1",
     "debug": ">=0.0.1",
     "handlebars": ">=0.0.1",
-    "underscore": ">=0.0.1",
+    "underscore": ">=1.10.1",
     "underscore.nested": ">=0.0.1",
     "moment-timezone": ">=0.0.1"
   },
